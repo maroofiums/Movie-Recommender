@@ -1,15 +1,3 @@
-"""
-Data cleaning module for the Movie Recommendation Engine.
-
-Responsibilities:
-- Load raw dataset
-- Validate required columns
-- Remove duplicates
-- Handle missing values
-- Convert data types
-- Save cleaned dataset
-"""
-
 from __future__ import annotations
 
 import logging
