@@ -156,17 +156,17 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    subgraph Ingestion
-        A1[TMDB CSV Files] --> A2[Load & Merge]
+    subgraph ING[Ingestion]
+        A1[TMDB CSV Files] --> A2[Load and Merge]
     end
 
-    subgraph Cleaning
+    subgraph CLN[Cleaning]
         A2 --> B1[Drop Duplicates]
         B1 --> B2[Handle Missing Values]
         B2 --> B3[Type Casting]
     end
 
-    subgraph "Feature Engineering"
+    subgraph FE[Feature Engineering]
         B3 --> C1[Parse Genres JSON]
         B3 --> C2[Parse Collections]
         B3 --> C3[Parse Production Companies]
@@ -174,7 +174,7 @@ flowchart LR
         B3 --> C5[Normalize Runtime]
     end
 
-    subgraph "Text Synthesis"
+    subgraph TXT[Text Synthesis]
         C1 --> D1[Compose Movie Text]
         C2 --> D1
         C3 --> D1
@@ -184,10 +184,10 @@ flowchart LR
 
     D1 --> E1[(processed_movies.parquet)]
 
-    style Ingestion fill:#111827,stroke:#60a5fa,color:#fff
-    style Cleaning fill:#111827,stroke:#f87171,color:#fff
-    style "Feature Engineering" fill:#111827,stroke:#fbbf24,color:#fff
-    style "Text Synthesis" fill:#111827,stroke:#34d399,color:#fff
+    style ING fill:#111827,stroke:#60a5fa,color:#fff
+    style CLN fill:#111827,stroke:#f87171,color:#fff
+    style FE fill:#111827,stroke:#fbbf24,color:#fff
+    style TXT fill:#111827,stroke:#34d399,color:#fff
 ```
 
 ---
@@ -195,104 +195,57 @@ flowchart LR
 ## Directory Structure
 
 ```text
-deep-learning-movie-recommendation-engine/
-├── configs/
-│   ├── data_config.yaml
-│   ├── model_config.yaml
-│   └── train_config.yaml
+Movie-Recommender/
+├── app/
+│   ├── dependencies.py        # Shared FastAPI dependencies (index/model loading, DI)
+│   ├── main.py                 # FastAPI application entrypoint
+│   ├── routes.py                # API route definitions
+│   └── schemas.py               # Pydantic request/response models
+│
+├── config/
+│   └── settings.py              # Centralized configuration (paths, hyperparameters, env)
 │
 ├── data/
 │   ├── raw/
-│   │   └── tmdb_movies_metadata.csv
-│   ├── interim/
-│   │   └── cleaned_movies.parquet
-│   └── processed/
-│       └── movies_with_text.parquet
+│   │   └── movies_metadata.csv   # Original TMDB metadata export
+│   ├── interim/                  # Intermediate cleaned data artifacts
+│   └── processed/                # Final feature-engineered dataset with movie text
 │
-├── src/
-│   ├── data/
-│   │   ├── __init__.py
-│   │   ├── load_data.py
-│   │   ├── clean_data.py
-│   │   └── feature_engineering.py
-│   │
-│   ├── text/
-│   │   ├── __init__.py
-│   │   └── movie_text_builder.py
-│   │
-│   ├── pairs/
-│   │   ├── __init__.py
-│   │   ├── pair_sampler.py
-│   │   └── pair_dataset.py
-│   │
-│   ├── models/
-│   │   ├── __init__.py
-│   │   ├── siamese_network.py
-│   │   ├── encoder.py
-│   │   └── projection_head.py
-│   │
-│   ├── losses/
-│   │   ├── __init__.py
-│   │   └── contrastive_loss.py
-│   │
-│   ├── training/
-│   │   ├── __init__.py
-│   │   ├── trainer.py
-│   │   └── scheduler.py
-│   │
-│   ├── embeddings/
-│   │   ├── __init__.py
-│   │   └── generate_embeddings.py
-│   │
-│   ├── indexing/
-│   │   ├── __init__.py
-│   │   └── faiss_index.py
-│   │
-│   ├── evaluation/
-│   │   ├── __init__.py
-│   │   └── metrics.py
-│   │
-│   └── api/
-│       ├── __init__.py
-│       ├── main.py
-│       ├── schemas.py
-│       ├── routers/
-│       │   └── recommend.py
-│       └── services/
-│           └── recommendation_service.py
-│
-├── checkpoints/
-│   └── siamese_encoder_best.pt
-│
-├── embeddings/
-│   ├── movie_embeddings.npy
-│   └── movie_ids.json
-│
-├── indexes/
-│   └── faiss_index.bin
+├── models/                       # Saved model checkpoints
 │
 ├── notebooks/
-│   ├── 01_eda.ipynb
-│   ├── 02_pair_analysis.ipynb
-│   └── 03_embedding_visualization.ipynb
+│   └── EDA.ipynb                 # Exploratory data analysis
 │
-├── scripts/
-│   ├── train.py
-│   ├── generate_embeddings.py
-│   ├── build_index.py
-│   └── evaluate.py
+├── outputs/                      # Generated embeddings, FAISS index, evaluation reports
 │
-├── tests/
-│   ├── test_data_pipeline.py
-│   ├── test_siamese_network.py
-│   └── test_faiss_index.py
+├── src/
+│   ├── dataset.py                 # Pair dataset / DataLoader construction
+│   ├── embedder.py                # Embedding generation from trained encoder
+│   ├── evaluate.py                # Precision@K, Recall@K, MRR, NDCG evaluation
+│   ├── inference.py               # Inference-time helpers for the recommender
+│   ├── loss.py                    # Cosine contrastive loss implementation
+│   ├── model.py                   # Siamese network (encoder + projection head)
+│   ├── trainer.py                 # Training loop, optimizer, scheduler, checkpointing
+│   │
+│   ├── pair_generation/
+│   │   └── pair_generator.py      # Dynamic positive/negative pair sampling
+│   │
+│   ├── preprocessing/
+│   │   ├── cleaner.py             # Missing values, duplicates, type casting
+│   │   ├── feature_engineering.py # Genres, collections, companies, runtime, year
+│   │   └── text_builder.py        # Composes the rich movie-text representation
+│   │
+│   └── retrieval/
+│       ├── faiss_index.py         # FAISS IndexFlatIP construction and persistence
+│       ├── recommender.py         # Recommendation orchestration logic
+│       └── search.py              # Top-K query execution
 │
-├── Dockerfile
-├── docker-compose.yaml
+├── tests/                         # Unit and integration tests
+│
+├── .gitignore
+├── LICENSE
 ├── requirements.txt
-├── pyproject.toml
-├── README.md
-└── LICENSE
+└── README.md
 ```
 
 ---
@@ -626,7 +579,7 @@ After training converges, movie embeddings are **generated exactly once** in a d
 
 ```python
 >>> import numpy as np
->>> embeddings = np.load("embeddings/movie_embeddings.npy")
+>>> embeddings = np.load("outputs/movie_embeddings.npy")
 >>> embeddings.shape
 (45466, 256)
 >>> embeddings[0][:8]
@@ -795,8 +748,8 @@ where $\text{rel}_i$ is the graded relevance of the result at rank $i$, and $\te
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/<your-username>/deep-learning-movie-recommendation-engine.git
-cd deep-learning-movie-recommendation-engine
+git clone https://github.com/<your-username>/Movie-Recommender.git
+cd Movie-Recommender
 
 # 2. Create a virtual environment
 python -m venv .venv
@@ -827,16 +780,16 @@ docker run -p 8000:8000 movie-rec-engine
 ### 1. Data Preparation
 
 ```bash
-python -m src.data.load_data --config configs/data_config.yaml
-python -m src.data.clean_data --config configs/data_config.yaml
-python -m src.data.feature_engineering --config configs/data_config.yaml
+python -m src.preprocessing.cleaner --config config/settings.py
+python -m src.preprocessing.feature_engineering --config config/settings.py
+python -m src.preprocessing.text_builder --config config/settings.py
 ```
 
 ### 2. Training
 
 ```bash
-python scripts/train.py \
-    --config configs/train_config.yaml \
+python -m src.trainer \
+    --config config/settings.py \
     --epochs 20 \
     --batch-size 64 \
     --lr 2e-5
@@ -845,29 +798,29 @@ python scripts/train.py \
 ### 3. Embedding Generation
 
 ```bash
-python scripts/generate_embeddings.py \
-    --checkpoint checkpoints/siamese_encoder_best.pt \
-    --output embeddings/movie_embeddings.npy
+python -m src.embedder \
+    --checkpoint models/siamese_encoder_best.pt \
+    --output outputs/movie_embeddings.npy
 ```
 
 ### 4. Build FAISS Index
 
 ```bash
-python scripts/build_index.py \
-    --embeddings embeddings/movie_embeddings.npy \
-    --output indexes/faiss_index.bin
+python -m src.retrieval.faiss_index \
+    --embeddings outputs/movie_embeddings.npy \
+    --output outputs/faiss_index.bin
 ```
 
 ### 5. Launch the API
 
 ```bash
-uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### 6. Evaluate
 
 ```bash
-python scripts/evaluate.py --config configs/train_config.yaml
+python -m src.evaluate --config config/settings.py
 ```
 
 ---
@@ -956,7 +909,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 ```
 
--
+<div align="center">
 
 ---
 
